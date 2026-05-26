@@ -53,14 +53,14 @@
     --red: #ef5350;
     --text: #e8f0fe;
     --muted: #8eacc8;
-    --map-land: #2d6a4f;
-    --map-land-hover: #40916c;
+    --map-land: #2d7a55;
+    --map-land-hover: #52a876;
     --map-correct: #66bb6a;
     --map-wrong: #ef5350;
     --map-target: #f5a623;
     --map-learned: #4fc3f7;
     --map-search: #c77dff;
-    --map-border: #1b2a3b;
+    --map-border: #a8d5b0;
     --map-water: #1565c0;
     --shadow: 0 4px 24px rgba(0,0,0,0.5);
   }
@@ -145,6 +145,23 @@
     transition: background 0.2s;
   }
   #btn-menu:hover { background: var(--border); }
+  #btn-help {
+    background: var(--panel2);
+    border: 1.5px solid var(--border);
+    color: var(--muted);
+    border-radius: 20px;
+    padding: 4px 12px;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 0.82rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    transition: background 0.2s, color 0.2s;
+    white-space: nowrap;
+  }
+  #btn-help:hover { background: var(--border); color: var(--text); }
 
   /* ── Layout ── */
   #main {
@@ -387,7 +404,7 @@
   .country {
     fill: var(--map-land);
     stroke: var(--map-border);
-    stroke-width: 0.5px;
+    stroke-width: 0.8px;
     cursor: pointer;
     transition: fill 0.12s;
   }
@@ -469,6 +486,51 @@
   .modal-stat { color:var(--accent2); font-size:1.6rem; font-family:'Boogaloo',cursive; }
   .modal-stat-label { font-size:0.78rem; color:var(--muted); margin-bottom:10px; }
 
+  /* Progress panel */
+  .progress-header { user-select:none; }
+  #prog-grid::-webkit-scrollbar { width:3px; }
+  #prog-grid::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+  .prog-cell {
+    border-radius:5px; padding:3px 2px; text-align:center;
+    font-weight:800; font-size:0.62rem; border:1.5px solid transparent;
+    cursor:default; transition:background .25s,border-color .25s;
+    line-height:1.2;
+  }
+  .prog-cell.unseen   { background:var(--panel2); color:var(--muted);   border-color:var(--border); }
+  .prog-cell.learning { background:#3a1f00;       color:#f5a623;        border-color:#7a4000; }
+  .prog-cell.familiar { background:#0a2a4a;       color:var(--accent2); border-color:#1e4a7a; }
+  .prog-cell.mastered { background:#0a3a1a;       color:var(--green);   border-color:#1a6a2a; }
+  .ps-item { display:flex; align-items:center; gap:3px; font-size:0.68rem; font-weight:700; color:var(--muted); }
+  .ps-dot  { width:8px; height:8px; border-radius:2px; }
+  .ps-dot.unseen   { background:var(--border); }
+  .ps-dot.learning { background:#f5a623; }
+  .ps-dot.familiar { background:var(--accent2); }
+  .ps-dot.mastered { background:var(--green); }
+  /* Confetti */
+  #cfx { position:fixed;inset:0;pointer-events:none;z-index:9999;display:none; }
+  #cfx.show { display:block; }
+
+  /* Next button */
+  #btn-next {
+    display: none;
+    width: 100%;
+    margin-top: 7px;
+    background: var(--accent);
+    border: none;
+    color: #1a0e00;
+    border-radius: 8px;
+    padding: 8px 10px;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 800;
+    transition: background 0.15s, transform 0.1s;
+    letter-spacing: 0.3px;
+  }
+  #btn-next:hover  { background: #ffc043; }
+  #btn-next:active { transform: scale(0.97); }
+  #btn-next.show   { display: block; }
+
   /* Responsive */
   @media (max-width:600px) { #side { width:170px; min-width:150px; } }
   @media (max-width:480px) { #side { display:none; } }
@@ -481,14 +543,26 @@
   <div id="score-bar">
     <div class="score-chip">✅ <span class="num green" id="sc-correct">0</span></div>
     <div class="score-chip">❌ <span class="num red"   id="sc-wrong">0</span></div>
+    <div class="score-chip">🔥 <span class="num" id="sc-streak">0</span></div>
     <div class="score-chip">🌍 <span class="num" id="sc-learned">0</span>/<span id="sc-total">177</span></div>
     <div id="progress-wrap"><div id="progress-bar"></div></div>
     <button id="btn-menu">☰ Menu</button>
+    <a id="btn-help" href="https://github.com/NeumanGames/World-explorer#readme" target="_blank" rel="noopener">? Help</a>
   </div>
 </div>
 
 <div id="main">
   <div id="side">
+
+    <!-- Zoom (top for easy access) -->
+    <div class="side-section">
+      <div class="side-label">Zoom</div>
+      <div id="zoom-controls">
+        <button class="zoom-btn" onclick="zoom(1.4)">＋</button>
+        <button class="zoom-btn" onclick="zoom(1/1.4)">－</button>
+        <button class="zoom-btn" onclick="resetView()">⌂</button>
+      </div>
+    </div>
 
     <!-- Prompt -->
     <div class="side-section">
@@ -501,6 +575,7 @@
     <div class="side-section">
       <div class="side-label">Result</div>
       <div id="feedback-text">—</div>
+      <button id="btn-next" onclick="onNextClick()">Next ▶</button>
       <div class="srs-bar">
         <div class="srs-pip" id="pip0"></div>
         <div class="srs-pip" id="pip1"></div>
@@ -510,20 +585,20 @@
       </div>
     </div>
 
-    <!-- MC Choices (name mode) -->
+    <!-- MC Choices -->
     <div class="side-section" id="choices-section" style="display:none;">
       <div class="side-label">Choose</div>
       <div id="choices-box"></div>
     </div>
 
-    <!-- Study search (study mode only) -->
+    <!-- Study search -->
     <div class="side-section" id="search-section" style="display:none;">
       <div class="side-label">Search Countries</div>
       <input id="search-input" type="text" placeholder="Country or capital…" autocomplete="off" spellcheck="false">
       <div id="search-list"></div>
     </div>
 
-    <!-- Tooltip toggles (study mode only) -->
+    <!-- Tooltip toggles -->
     <div class="side-section" id="label-toggles">
       <div class="side-label">Tooltip Shows</div>
       <div class="toggle-row">
@@ -557,10 +632,10 @@
     <!-- Mode buttons -->
     <div class="side-section">
       <div class="side-label">Mode</div>
-      <button class="mode-btn active" id="mode-click"   onclick="setMode('click')">🗺️ Click the Country</button>
+      <button class="mode-btn" id="mode-click"   onclick="setMode('click')">🗺️ Click the Country</button>
       <button class="mode-btn"        id="mode-name"    onclick="setMode('name')">📝 Name the Country</button>
       <button class="mode-btn"        id="mode-capital" onclick="setMode('capital')">🏛️ Find the Capital</button>
-      <button class="mode-btn"        id="mode-study"   onclick="setMode('study')">📖 Study Mode</button>
+      <button class="mode-btn active" id="mode-study"   onclick="setMode('study')">📖 Study Mode</button>
     </div>
 
     <!-- Legend -->
@@ -574,13 +649,16 @@
       <div class="legend-item"><div class="legend-dot" style="background:var(--map-search)"></div>Search result</div>
     </div>
 
-    <!-- Zoom -->
-    <div class="side-section">
-      <div class="side-label">Zoom</div>
-      <div id="zoom-controls">
-        <button class="zoom-btn" onclick="zoom(1.4)">＋</button>
-        <button class="zoom-btn" onclick="zoom(1/1.4)">－</button>
-        <button class="zoom-btn" onclick="resetView()">⌂</button>
+    <!-- Progress panel -->
+    <div class="side-section" id="prog-wrap">
+      <div class="progress-header" onclick="toggleProgress()" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
+        <span class="side-label" style="margin:0">📊 Progress</span>
+        <span id="prog-arrow" style="font-size:0.7rem;font-weight:800;color:var(--muted)">▼ Show</span>
+      </div>
+      <div id="prog-body" style="display:none;margin-top:8px;">
+        <div id="prog-title" style="font-size:0.75rem;font-weight:800;color:var(--accent2);margin-bottom:5px;">0 / 177 mastered</div>
+        <div id="prog-summary" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;font-size:0.7rem;"></div>
+        <div id="prog-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:3px;max-height:200px;overflow-y:auto;"></div>
       </div>
     </div>
 
@@ -699,21 +777,113 @@ WORLD_COUNTRIES.forEach(c => {
 // ─────────────────────────────────────────────
 // STATE
 // ─────────────────────────────────────────────
-let currentMode   = 'click';
+let currentMode   = 'study';
 let currentTarget = null;
 let sessionOver   = false;
 let answered      = false;
-let studyAssist   = false;  // tooltip visible during quiz modes
+let studyAssist   = false;
 
 // Track drag vs click
 let mouseDownX = 0, mouseDownY = 0;
-const DRAG_THRESHOLD = 5; // px
+const DRAG_THRESHOLD = 5;
 
-let srsData = {};
-WORLD_COUNTRIES.forEach(c => { srsData[c.id] = 0; });
+// ── Spaced-repetition (ported from USA Explorer) ──────────────────────────
+// Per-country record keyed by numeric id:
+//   seen, correct, streak, weight, lastSeen
+const SRS = {};
+WORLD_COUNTRIES.forEach(c => {
+  SRS[c.id] = { seen:0, correct:0, streak:0, weight:10, lastSeen:-99 };
+});
+let qIndex = 0;
+
+const W_UNSEEN    = 12;
+const W_WRONG     = 18;
+const W_WRONG_REP = 30;
+const W_STREAK1   = 5;
+const W_STREAK2   = 2;
+const W_STREAK3   = 0.8;
+const COOLDOWN    = 4;
+
+function masteryLevel(r) {
+  if (r.seen === 0) return 'unseen';
+  if (r.streak >= 3 && r.correct / r.seen >= 0.75) return 'mastered';
+  if (r.streak >= 1 && r.correct / r.seen >= 0.5)  return 'familiar';
+  return 'learning';
+}
+
+function shuffle(a) {
+  let b = [...a];
+  for (let i = b.length-1; i > 0; i--) {
+    let j = Math.floor(Math.random()*(i+1));
+    [b[i],b[j]] = [b[j],b[i]];
+  }
+  return b;
+}
+
+function pickNextCountry() {
+  WORLD_COUNTRIES.forEach(c => {
+    const r = SRS[c.id];
+    if (r.seen === 0) {
+      r.weight = W_UNSEEN;
+    } else {
+      const age = qIndex - r.lastSeen;
+      if (age < COOLDOWN) { r.weight = 0; return; }
+    }
+    if (r.weight < 0) r.weight = 0;
+  });
+
+  const total = WORLD_COUNTRIES.reduce((s, c) => s + SRS[c.id].weight, 0);
+  let pool = WORLD_COUNTRIES;
+  if (total === 0) {
+    pool = [...WORLD_COUNTRIES]
+      .sort((a,b) => SRS[a.id].lastSeen - SRS[b.id].lastSeen)
+      .slice(0, 10);
+    pool.forEach(c => { SRS[c.id].weight = W_STREAK2; });
+  }
+
+  const weights = pool.map(c => SRS[c.id].weight);
+  const sum = weights.reduce((a,b) => a+b, 0);
+  let r = Math.random() * sum, pick = pool[pool.length-1];
+  for (let i = 0; i < pool.length; i++) {
+    r -= weights[i];
+    if (r <= 0) { pick = pool[i]; break; }
+  }
+  return pick;
+}
+
+function genQuestion() {
+  const correct = pickNextCountry();
+  // Distractors weighted toward countries the student struggles with
+  const others = shuffle(
+    WORLD_COUNTRIES
+      .filter(c => c.id !== correct.id)
+      .sort((a,b) => SRS[b.id].weight - SRS[a.id].weight)
+      .slice(0, 12)
+  ).slice(0, 3);
+  SRS[correct.id].lastSeen = qIndex;
+  return { correct, choices: shuffle([correct, ...others]) };
+}
+
+function recordAnswer(id, ok) {
+  const r = SRS[id];
+  r.seen++; qIndex++;
+  if (ok) {
+    correctCount++; streak++; r.correct++; r.streak++;
+    if      (r.streak >= 3) r.weight = W_STREAK3;
+    else if (r.streak === 2) r.weight = W_STREAK2;
+    else                     r.weight = W_STREAK1;
+    if (streak >= 3) triggerConfetti();
+  } else {
+    wrongCount++; streak = 0; r.streak = 0;
+    r.weight = r.seen > 2 ? W_WRONG_REP : W_WRONG;
+  }
+  updateScoreUI();
+  updateProgress();
+}
 
 let correctCount = 0;
 let wrongCount   = 0;
+let streak       = 0;
 
 // zoom/pan
 let scale = 1, panX = 0, panY = 0;
@@ -1019,91 +1189,111 @@ function clearMapStates() {
   getAllCountryEls().forEach(el => {
     const id = el.getAttribute('data-id');
     el.classList.remove('target','correct','wrong','dimmed','search-hi');
-    if (srsData[id] >= 3) el.classList.add('learned');
+    if (masteryLevel(SRS[id]) === 'mastered') el.classList.add('learned');
     else el.classList.remove('learned');
   });
 }
 
 // ─────────────────────────────────────────────
-// SRS HELPERS
+// SCORE UI + PROGRESS
 // ─────────────────────────────────────────────
-function pickTarget(excludeId) {
-  const pool = WORLD_COUNTRIES.filter(c => {
-    if (excludeId && c.id === excludeId) return false;
-    if (currentMode !== 'study' && srsData[c.id] >= 5) return false;
-    return true;
-  });
-  if (!pool.length) return null;
-  const weights = pool.map(c => Math.max(1, 6 - srsData[c.id]));
-  const total = weights.reduce((a, b) => a + b, 0);
-  let r = Math.random() * total;
-  for (let i = 0; i < pool.length; i++) {
-    r -= weights[i];
-    if (r <= 0) return pool[i];
-  }
-  return pool[pool.length - 1];
-}
-
-function updateSRS(id, correct) {
-  srsData[id] = correct
-    ? Math.min(5, srsData[id] + 1)
-    : Math.max(0, srsData[id] - 1);
-}
-
 function updateSRSBar(id) {
-  const s = srsData[id];
+  const r = SRS[id];
+  const lvl = masteryLevel(r);
+  const strength = lvl === 'mastered' ? 5 : lvl === 'familiar' ? 3 : lvl === 'learning' ? 1 : 0;
   for (let i = 0; i < 5; i++)
-    document.getElementById('pip' + i).classList.toggle('filled', i < s);
+    document.getElementById('pip' + i).classList.toggle('filled', i < strength);
 }
 
-// ─────────────────────────────────────────────
-// SCORE UI
-// ─────────────────────────────────────────────
 function updateScoreUI() {
   document.getElementById('sc-correct').textContent = correctCount;
   document.getElementById('sc-wrong').textContent   = wrongCount;
-  const learned = WORLD_COUNTRIES.filter(c => srsData[c.id] >= 3).length;
-  document.getElementById('sc-learned').textContent = learned;
+  document.getElementById('sc-streak').textContent  = streak;
+  const mastered = WORLD_COUNTRIES.filter(c => masteryLevel(SRS[c.id]) === 'mastered').length;
+  document.getElementById('sc-learned').textContent = mastered;
   document.getElementById('progress-bar').style.width =
-    (learned / WORLD_COUNTRIES.length * 100) + '%';
-  // Refresh learned highlights
+    (mastered / WORLD_COUNTRIES.length * 100) + '%';
+  // Refresh learned highlights on map
   getAllCountryEls().forEach(el => {
     const id = el.getAttribute('data-id');
     const isActive = el.classList.contains('correct') || el.classList.contains('wrong') ||
                      el.classList.contains('target')  || el.classList.contains('search-hi');
     if (!isActive) {
-      if (srsData[id] >= 3) el.classList.add('learned');
+      if (masteryLevel(SRS[id]) === 'mastered') el.classList.add('learned');
       else el.classList.remove('learned');
     }
+  });
+}
+
+let progOpen = false;
+function toggleProgress() {
+  progOpen = !progOpen;
+  document.getElementById('prog-body').style.display = progOpen ? '' : 'none';
+  document.getElementById('prog-arrow').textContent  = progOpen ? '▲ Hide' : '▼ Show';
+  if (progOpen) updateProgress();
+}
+
+function updateProgress() {
+  if (!progOpen) return;
+  const counts = { unseen:0, learning:0, familiar:0, mastered:0 };
+  WORLD_COUNTRIES.forEach(c => counts[masteryLevel(SRS[c.id])]++);
+
+  document.getElementById('prog-title').textContent =
+    counts.mastered + ' / ' + WORLD_COUNTRIES.length + ' mastered';
+
+  document.getElementById('prog-summary').innerHTML =
+    ['unseen','learning','familiar','mastered'].map(k =>
+      `<span class="ps-item"><span class="ps-dot ${k}"></span>${counts[k]}</span>`
+    ).join('');
+
+  const grid = document.getElementById('prog-grid');
+  grid.innerHTML = '';
+  const order = { unseen:0, learning:1, familiar:2, mastered:3 };
+  const sorted = [...WORLD_COUNTRIES].sort((a,b) => {
+    const la = masteryLevel(SRS[a.id]), lb = masteryLevel(SRS[b.id]);
+    if (order[la] !== order[lb]) return order[la] - order[lb];
+    return SRS[b.id].weight - SRS[a.id].weight;
+  });
+  sorted.forEach(c => {
+    const r = SRS[c.id];
+    const lvl = masteryLevel(r);
+    const acc = r.seen ? Math.round(100 * r.correct / r.seen) : 0;
+    const cell = document.createElement('div');
+    cell.className = 'prog-cell ' + lvl;
+    cell.title = c.name + (r.seen ? ` — ${acc}% (${r.correct}/${r.seen})` : ' — not seen');
+    // Short label: first 3 chars
+    cell.textContent = c.name.substring(0,4);
+    grid.appendChild(cell);
   });
 }
 
 // ─────────────────────────────────────────────
 // QUIZ MODES
 // ─────────────────────────────────────────────
+let currentQ = null;
+
 function nextQuestion() {
   if (sessionOver) return;
   answered = false;
+  hideNextButton();
   clearMapStates();
   document.getElementById('choices-section').style.display = 'none';
   document.getElementById('capital-clue').textContent = '';
 
-  const target = pickTarget(currentTarget?.id);
-  if (!target) { showCompletionModal(); return; }
+  currentQ = genQuestion();
+  const target = currentQ.correct;
   currentTarget = target;
 
   if (currentMode === 'click') {
-    // Show capital as the clue
     const cap = CAPITALS[target.name] || '';
     setPrompt('🗺️ Click the Country', target.name);
     document.getElementById('capital-clue').textContent = cap ? `🏛️ Capital: ${cap}` : '';
     setFeedback('Find it on the map!', '');
 
   } else if (currentMode === 'name') {
-    // Highlight target, choose from 4 names
     const el = getCountryEl(target.id);
     if (el) el.classList.add('target');
-    showChoices(target);
+    showChoices(currentQ.choices, target);
     setPrompt('📝 Name this Country', 'What is this country?');
 
   } else if (currentMode === 'capital') {
@@ -1116,14 +1306,7 @@ function nextQuestion() {
   updateScoreUI();
 }
 
-function showChoices(target) {
-  const pool = WORLD_COUNTRIES.filter(c => c.id !== target.id);
-  const wrongs = [];
-  while (wrongs.length < 3) {
-    const r = pool[Math.floor(Math.random() * pool.length)];
-    if (!wrongs.find(w => w.id === r.id)) wrongs.push(r);
-  }
-  const choices = [target, ...wrongs].sort(() => Math.random() - 0.5);
+function showChoices(choices, target) {
   const box = document.getElementById('choices-box');
   box.innerHTML = '';
   choices.forEach(c => {
@@ -1139,30 +1322,30 @@ function showChoices(target) {
 function handleChoice(chosen, target) {
   if (answered) return;
   answered = true;
-  const correct = chosen.id === target.id;
-  updateSRS(target.id, correct);
-  if (correct) correctCount++; else wrongCount++;
+  const ok = chosen.id === target.id;
+  recordAnswer(target.id, ok);
 
   document.querySelectorAll('.choice-btn').forEach(b => {
     b.disabled = true;
     if (b.textContent === target.name) b.classList.add('correct');
-    else if (b.textContent === chosen.name && !correct) b.classList.add('wrong');
+    else if (b.textContent === chosen.name && !ok) b.classList.add('wrong');
   });
 
   const el = getCountryEl(target.id);
-  if (el) { el.classList.remove('target'); el.classList.add(correct ? 'correct' : 'wrong'); }
-  if (!correct) {
+  if (el) { el.classList.remove('target'); el.classList.add(ok ? 'correct' : 'wrong'); }
+  if (!ok) {
     const we = getCountryEl(chosen.id);
     if (we) we.classList.add('wrong');
   }
 
+  const msgs = ['🎉 Awesome!','⭐ Correct!','🌟 Great job!','🏆 You got it!','👏 Excellent!'];
   setFeedback(
-    correct ? `✅ Correct! ${target.name}` : `❌ That's ${chosen.name}`,
-    correct ? 'correct' : 'wrong'
+    ok ? msgs[Math.floor(Math.random()*msgs.length)] + ` ${target.name}!`
+       : `😬 Not quite! It was ${target.name}.`,
+    ok ? 'correct' : 'wrong'
   );
-  updateScoreUI();
   updateSRSBar(target.id);
-  setTimeout(nextQuestion, 1600);
+  showNextButton();
 }
 
 function onCountryClick(e) {
@@ -1177,24 +1360,41 @@ function onCountryClick(e) {
   const name = e.target.getAttribute('data-name');
   if (!currentTarget) return;
 
-  const correct = id === currentTarget.id;
+  const ok = id === currentTarget.id;
   answered = true;
-  updateSRS(currentTarget.id, correct);
-  if (correct) correctCount++; else wrongCount++;
+  recordAnswer(currentTarget.id, ok);
 
-  e.target.classList.add(correct ? 'correct' : 'wrong');
-  if (!correct) {
+  e.target.classList.add(ok ? 'correct' : 'wrong');
+  if (!ok) {
     const te = getCountryEl(currentTarget.id);
     if (te) te.classList.add('target');
   }
 
+  const msgs = ['🎉 Awesome!','⭐ Correct!','🌟 Great job!','🏆 You got it!','👏 Excellent!'];
   setFeedback(
-    correct ? `✅ ${currentTarget.name}!` : `❌ That's ${name}. It was ${currentTarget.name}`,
-    correct ? 'correct' : 'wrong'
+    ok ? msgs[Math.floor(Math.random()*msgs.length)] + ` ${currentTarget.name}!`
+       : `😬 Not quite! That's ${name}. It was ${currentTarget.name}`,
+    ok ? 'correct' : 'wrong'
   );
-  updateScoreUI();
   updateSRSBar(currentTarget.id);
-  setTimeout(nextQuestion, 1800);
+  showNextButton();
+}
+
+
+// ─────────────────────────────────────────────
+// NEXT BUTTON
+// ─────────────────────────────────────────────
+function showNextButton() {
+  document.getElementById('btn-next').classList.add('show');
+}
+
+function hideNextButton() {
+  document.getElementById('btn-next').classList.remove('show');
+}
+
+function onNextClick() {
+  hideNextButton();
+  nextQuestion();
 }
 
 // ─────────────────────────────────────────────
@@ -1231,11 +1431,16 @@ function showStudyCountry() {
   setFeedback('Click map or list to advance', '');
 }
 
-// Click on country in study mode → advance
+// Click on country in study mode → highlight it; if it IS the target, advance
 function handleStudyMapClick(e) {
   if (didPan) return;
-  studyIndex++;
-  showStudyCountry();
+  const clickedId = e.target.getAttribute('data-id');
+  // Only advance when the user clicks the highlighted target country
+  if (clickedId === currentTarget.id) {
+    studyIndex++;
+    showStudyCountry();
+  }
+  // Clicking elsewhere on the map does nothing in study mode
 }
 
 // ─────────────────────────────────────────────
@@ -1327,19 +1532,20 @@ function setFeedback(text, cls) {
 // MENU / MODAL
 // ─────────────────────────────────────────────
 function showMenu() {
-  const learned = WORLD_COUNTRIES.filter(c => srsData[c.id] >= 3).length;
-  const total   = WORLD_COUNTRIES.length;
-  const acc     = correctCount + wrongCount > 0
+  const mastered = WORLD_COUNTRIES.filter(c => masteryLevel(SRS[c.id]) === 'mastered').length;
+  const familiar = WORLD_COUNTRIES.filter(c => masteryLevel(SRS[c.id]) === 'familiar').length;
+  const total    = WORLD_COUNTRIES.length;
+  const acc      = correctCount + wrongCount > 0
     ? Math.round(correctCount / (correctCount + wrongCount) * 100) : 0;
 
   document.getElementById('modal-content').innerHTML = `
     <h2>🌍 World Explorer</h2>
-    <p>Free geography quiz by <strong>NeumanGames™</strong><br>Learn all ${total} countries!</p>
+    <p>Free geography quiz by <strong>NeumanGames™</strong><br>Learn all ${total} countries of the world!</p>
     <div style="margin-bottom:14px">
-      <div class="modal-stat">${learned}/${total}</div>
-      <div class="modal-stat-label">countries learned</div>
+      <div class="modal-stat">${mastered}/${total}</div>
+      <div class="modal-stat-label">mastered &nbsp;·&nbsp; ${familiar} familiar</div>
       <div class="modal-stat">${acc}%</div>
-      <div class="modal-stat-label">accuracy (${correctCount}✅ ${wrongCount}❌)</div>
+      <div class="modal-stat-label">accuracy &nbsp;(${correctCount}✅ &nbsp;${wrongCount}❌ &nbsp;🔥${streak})</div>
     </div>
     <div class="modal-grid">
       <button class="modal-btn" onclick="closeMenu();setMode('click')"><span class="icon">🗺️</span>Click the Country</button>
@@ -1347,12 +1553,12 @@ function showMenu() {
       <button class="modal-btn" onclick="closeMenu();setMode('capital')"><span class="icon">🏛️</span>Find the Capital</button>
       <button class="modal-btn" onclick="closeMenu();setMode('study')"><span class="icon">📖</span>Study Mode</button>
     </div>
-    <button class="modal-btn" onclick="resetAll()" style="width:100%;margin-bottom:8px">🔄 Reset Progress</button>
+    <button class="modal-btn" onclick="resetAll()" style="width:100%;margin-bottom:8px">🔄 Reset All Progress</button>
     <button class="modal-btn" onclick="closeMenu()" style="width:100%">▶ Continue</button>
     <div style="margin-top:14px;font-size:0.74rem;color:var(--muted)">
-      Support us:
-      <a href="https://ko-fi.com/neumangames" target="_blank" style="color:var(--accent2)">Ko-fi</a> ·
-      <a href="https://patreon.com/NeumanGames" target="_blank" style="color:var(--accent2)">Patreon</a>
+      <a href="https://ko-fi.com/neumangames" target="_blank" style="color:var(--accent2)">🎁 Ko-fi</a> &nbsp;·&nbsp;
+      <a href="https://patreon.com/NeumanGames" target="_blank" style="color:var(--accent2)">⭐ Patreon</a> &nbsp;·&nbsp;
+      <a href="https://neumangames.github.io" target="_blank" style="color:var(--muted)">neumangames.github.io</a>
     </div>
   `;
   document.getElementById('overlay').classList.add('show');
@@ -1368,7 +1574,7 @@ function showCompletionModal() {
     ? Math.round(correctCount / (correctCount + wrongCount) * 100) : 0;
   document.getElementById('modal-content').innerHTML = `
     <h2>🎉 Amazing!</h2>
-    <p>You've mastered all the countries!</p>
+    <p>You've mastered all the countries of the world!</p>
     <div class="modal-stat">${acc}%</div>
     <div class="modal-stat-label">accuracy this session</div>
     <div style="height:12px"></div>
@@ -1379,11 +1585,39 @@ function showCompletionModal() {
 }
 
 function resetAll() {
-  WORLD_COUNTRIES.forEach(c => { srsData[c.id] = 0; });
-  correctCount = 0; wrongCount = 0;
+  WORLD_COUNTRIES.forEach(c => {
+    SRS[c.id] = { seen:0, correct:0, streak:0, weight:10, lastSeen:-99 };
+  });
+  correctCount = 0; wrongCount = 0; streak = 0; qIndex = 0;
   updateScoreUI();
+  updateProgress();
   closeMenu();
   setMode(currentMode);
+}
+
+function triggerConfetti() {
+  const cvs = document.getElementById('cfx');
+  cvs.className = 'show';
+  cvs.width = window.innerWidth; cvs.height = window.innerHeight;
+  const ctx = cvs.getContext('2d');
+  const cols = ['#3B82F6','#F59E0B','#10B981','#EF4444','#8B5CF6','#EC4899','#F97316'];
+  const pieces = Array.from({length:70}, () => ({
+    x: Math.random()*cvs.width, y: -15,
+    vx: (Math.random()-.5)*3.5, vy: Math.random()*3+1.5,
+    col: cols[Math.floor(Math.random()*cols.length)],
+    sz: Math.random()*7+3, rot: Math.random()*360, rv: (Math.random()-.5)*7
+  }));
+  let f = 0;
+  (function draw() {
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+    pieces.forEach(p => {
+      p.x+=p.vx; p.y+=p.vy; p.rot+=p.rv;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot*Math.PI/180);
+      ctx.fillStyle=p.col; ctx.fillRect(-p.sz/2,-p.sz/2,p.sz,p.sz); ctx.restore();
+    });
+    if (++f < 100) requestAnimationFrame(draw);
+    else { ctx.clearRect(0,0,cvs.width,cvs.height); cvs.className=''; }
+  })();
 }
 
 document.getElementById('btn-menu').addEventListener('click', showMenu);
@@ -1398,11 +1632,22 @@ window.addEventListener('load', () => {
   buildMap();
   setupPanZoom();
   resetView();
-  nextQuestion();
+  setMode('study');
   updateScoreUI();
+  updateProgress();
 });
 
 window.addEventListener('resize', resetView);
 </script>
+<canvas id="cfx"></canvas>
+<footer style="text-align:center;padding:16px 16px 22px;font-family:'Nunito',sans-serif;font-size:11px;color:#4a6a8a;line-height:1.9;background:var(--panel);border-top:1px solid var(--border);flex-shrink:0;">
+  &copy; 2026 NeumanGames&#x2122;. All rights reserved. &mdash; World Explorer is a free educational game for personal and classroom use.<br>
+  Unauthorized reproduction or commercial use is prohibited. Free forever &mdash; Works on any device with a web browser.<br>
+  <a href="https://ko-fi.com/neumangames" target="_blank" rel="noopener" style="color:#29ABE2;text-decoration:none;font-weight:700;">🎁 Make a Donation on Ko-fi</a>
+  &nbsp;&bull;&nbsp;
+  <a href="https://www.patreon.com/NeumanGames" target="_blank" rel="noopener" style="color:#FF8A00;text-decoration:none;font-weight:700;">⭐ Join us on Patreon</a>
+  &nbsp;&bull;&nbsp;
+  <a href="https://neumangames.github.io" target="_blank" rel="noopener" style="color:#93C5FD;text-decoration:none;font-weight:700;">neumangames.github.io</a>
+</footer>
 </body>
 </html>
